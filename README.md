@@ -18,6 +18,16 @@ This version of the Read_and_Write_Excel plugin supports additional features whi
     * `write_and_close`: Will just write everything you've queued with `queue_write`, then close the excel file.
     * `queue_write`: Will queue something to be written to the excel file you've opened previously with `read_and_open`
 
+## Installation
+The easiest way to install the plugin is to use Fiji's built-in updater:
+1) Go to Help > Update...
+2) Click "Manage update sites"
+3) Click "Add update site"
+4) Give the new update site a name, and use the URL `http://sites.imagej.net/Bkromhout/`
+5) You should now see the plugin available in the updater.
+
+If you can't do that for some reason, you should also be able to download the latest release, unzip it, and copy the plugin's JAR to the ImageJ plugins folder, and the JARs in the "jars" folder to ImageJ's "jars" folder.
+
 ## Usage Example
 ```
 run("Read and Write Excel", "file_mode=read_and_open file=[/Users/bkromhout/Desktop/Test.xlsx]");
