@@ -97,7 +97,7 @@ public class Read_and_Write_Excel implements PlugIn {
 
         // Get results, the number of columns and rows, the data, and the headings.
         ResultsTable resultsTable = debugTable == null ? Analyzer.getResultsTable() : debugTable;
-        int numColumns = resultsTable.getLastColumn() + 1;
+        int numColumns = resultsTable.getHeadings().length;		//I encountered this issue before. Passing this number gives the total number of possible columns or some such.
         int numRows = resultsTable.size();
         String[] headers = resultsTable.getHeadings();
         String[][] results = new String[numRows][numColumns];
@@ -106,7 +106,7 @@ public class Read_and_Write_Excel implements PlugIn {
         // plus it could mess up if there are any empty cells...this is the most sensible in the end.
         for (int row = 0; row < numRows; row++)
             for (int col = 0; col < numColumns; col++)
-                results[row][col] = resultsTable.getStringValue(col, row);
+                results[row][col] = resultsTable.getStringValue(headers[col], row);		//Column header reference issue. Passing int for some reason calls hidden values. Passing header string works.
 
         // Figure out which holder to use.
         ExcelHolder holderToUse = fileHolder;
