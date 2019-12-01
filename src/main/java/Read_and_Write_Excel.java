@@ -12,7 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-/**version 1.1.2*/
+/**version 1.1.5*/
 public class Read_and_Write_Excel implements PlugIn {
     private enum FileHandlingMode { OPEN_CLOSE, READ_OPEN, WRITE_CLOSE, QUEUE}
 
@@ -109,13 +109,16 @@ public class Read_and_Write_Excel implements PlugIn {
         // Loop over the results. We could use the getRowAsString(), but we'd just have to split it and parse it again,
         // plus it could mess up if there are any empty cells...this is the most sensible in the end.
         for (int row = 0; row < numRows; row++){
-            //Solution for handling empty label-column cells, which otherwise causes the plugin to fail. Replace null label cells with "NaN".
-            if (resultsTable.getLabel(row) == null){
-                resultsTable.setLabel("null", row);
-            }
             //Continue with results loop, as described above.
             for (int col = 0; col < numColumns; col++){
-                results[row][col] = resultsTable.getStringValue(headers[col], row);		//Column header reference issue. Passing int for some reason calls hidden values. Passing header string works.
+            	//Solution for handling empty column cells, which otherwise causes the plugin to fail.
+            	if (resultsTable.columnExists(headers[col]) == true && headers[col] != "Label" && !resultsTable.getStringValue(headers[col], row).isEmpty() ){
+            		results[row][col] = resultsTable.getStringValue(headers[col], row);		//Column header reference issue. Passing int for some reason calls hidden values. Passing header string works.
+            	} else if(headers[col] == "Label" && resultsTable.getLabel(row) != null && !resultsTable.getLabel(row).isEmpty()) {
+            		results[row][col] = resultsTable.getLabel(row);
+            	} else {
+            		results[row][col] = " ";
+            	}
             }
         }
             
@@ -233,7 +236,7 @@ public class Read_and_Write_Excel implements PlugIn {
                     else {
                         //Check result datatype and format the cell appropriately before writing
                         //Not a perfect checking method, but will work most of the time without too much overhead
-                        if (results[resultRow][resultCol - idxAdj].matches(".*[A-Za-z].*") == true){
+                        if (results[resultRow][resultCol - idxAdj].matches(".*[A-Za-z].*") == true || results[resultRow][resultCol - idxAdj]  == " "){
                             cell.setCellValue(results[resultRow][resultCol - idxAdj]);
                         } else {
                             cell.setCellType(CellType.NUMERIC);
