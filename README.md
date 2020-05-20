@@ -22,12 +22,12 @@ This version of the Read_and_Write_Excel plugin supports additional features whi
 ## Installation
 The easiest way to install the plugin is to use Fiji's built-in updater:
 1) Go to Help > Update...
-2) Click "Manage update sites"
-~~3) Click "Add update site"~~
-3) Find 'ResultsToExcel' in the list of plugins and mark the check-box.
-~~4) Give the new update site a name, and use the URL `http://sites.imagej.net/Bkromhout/`~~ (*does not host the most recent version currently*)
-4) Close the "Manage update sites" window and click "Apply changes" in the Imagej Updater main window.
-~~5) You should now see the plugin available in the updater.~~
+2) Click "Manage update sites"<br/>
+~~3) Click "Add update site"~~<br/>
+3) Find 'ResultsToExcel' in the list of plugins and mark the check-box.<br/>
+~~4) Give the new update site a name, and use the URL `http://sites.imagej.net/Bkromhout/`~~ (*does not host the most recent version currently*)<br/>
+4) Close the "Manage update sites" window and click "Apply changes" in the Imagej Updater main window.<br/>
+~~5) You should now see the plugin available in the updater.~~<br/>
 5) Restart ImageJ.
 
 If you can't do that for some reason, you should also be able to download the latest release, unzip it, and copy the plugin's JAR to the ImageJ plugins folder, and the JARs in the "jars" folder to ImageJ's "jars" folder.
