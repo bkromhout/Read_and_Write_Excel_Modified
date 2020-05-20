@@ -12,7 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-/**version 1.1.5*/
+/**version 1.1.6*/
 public class Read_and_Write_Excel implements PlugIn {
     private enum FileHandlingMode { OPEN_CLOSE, READ_OPEN, WRITE_CLOSE, QUEUE}
 
@@ -61,6 +61,7 @@ public class Read_and_Write_Excel implements PlugIn {
         debugOptions = "no_count_column file=[/path/to/Results File.xlsx]";
         new Read_and_Write_Excel().run("");
         debugOptions = "stack_results";
+        new Read_and_Write_Excel().run("");
     }
 
     public void run(String arg) {
@@ -193,8 +194,15 @@ public class Read_and_Write_Excel implements PlugIn {
             // Change the first column index to write data to, depending on stack_results status.
             row = sheet.getRow(FIRST_DATA_ROW);
            	int firstDataRow = FIRST_DATA_ROW;
-            if (sheet.getLastRowNum()!=2 && stackResults == true) {
+            if (sheet.getLastRowNum()!=1 && stackResults == true) {
             	int lastColIdx = row.getLastCellNum()-1;
+            		// getLastCellNum() will output -1 if the row does not contain any cells, so we handle that scenario here (check for -2 as we already took away 1 above)
+            	    if (lastColIdx == -2) {
+            			//when the results table is empty the headings length is output as 0, so this must also be handled
+            			if (headers.length == 0) {
+            				lastColIdx = 0;
+            			} else lastColIdx = headers.length-1+idxAdj;
+            		}
             	int lastRowOfLastColIdx = FIRST_DATA_ROW;
             	Row rowL = sheet.getRow(lastRowOfLastColIdx);
             	Cell testCell = row.getCell(lastColIdx);
