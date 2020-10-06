@@ -4,6 +4,7 @@ import ij.plugin.PlugIn;
 import ij.plugin.filter.Analyzer;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -12,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+/**version 1.1.7*/
 public class Read_and_Write_Excel implements PlugIn {
     private enum FileHandlingMode { OPEN_CLOSE, READ_OPEN, WRITE_CLOSE, QUEUE}
 
@@ -31,6 +33,8 @@ public class Read_and_Write_Excel implements PlugIn {
     private String filePath;
     private String sheetName;
     private String dataSetLabel;
+    private String importCell;
+    private boolean stackResults = false;
     private boolean noCountColumn = false;
     private FileHandlingMode fileHandlingMode = FileHandlingMode.OPEN_CLOSE;
 
@@ -57,6 +61,11 @@ public class Read_and_Write_Excel implements PlugIn {
         debugOptions = "no_count_column dataset_label=[Test dataset label] sheet=[Sheet Name] file=[/Users/bkromhout/Desktop/Results File.xlsx]";
         new Read_and_Write_Excel().run("");
         debugOptions = "no_count_column file=[/path/to/Results File.xlsx]";
+        new Read_and_Write_Excel().run("");
+        debugOptions = "stack_results";
+        new Read_and_Write_Excel().run("");
+        debugOptions = "cell_ref=[A1]";
+        new Read_and_Write_Excel().run("");
     }
 
     public void run(String arg) {
@@ -97,17 +106,27 @@ public class Read_and_Write_Excel implements PlugIn {
 
         // Get results, the number of columns and rows, the data, and the headings.
         ResultsTable resultsTable = debugTable == null ? Analyzer.getResultsTable() : debugTable;
-        int numColumns = resultsTable.getLastColumn() + 1;
+        int numColumns = resultsTable.getHeadings().length;
         int numRows = resultsTable.size();
         String[] headers = resultsTable.getHeadings();
         String[][] results = new String[numRows][numColumns];
 
         // Loop over the results. We could use the getRowAsString(), but we'd just have to split it and parse it again,
         // plus it could mess up if there are any empty cells...this is the most sensible in the end.
-        for (int row = 0; row < numRows; row++)
-            for (int col = 0; col < numColumns; col++)
-                results[row][col] = resultsTable.getStringValue(col, row);
-
+        for (int row = 0; row < numRows; row++){
+            //Continue with results loop, as described above.
+            for (int col = 0; col < numColumns; col++){
+            	//Solution for handling empty column cells, which otherwise causes the plugin to fail.
+            	if (resultsTable.columnExists(headers[col]) == true && headers[col] != "Label" && !resultsTable.getStringValue(headers[col], row).isEmpty() ){
+            		results[row][col] = resultsTable.getStringValue(headers[col], row);		//Column header reference issue. Passing int for some reason calls hidden values. Passing header string works.
+            	} else if(headers[col] == "Label" && resultsTable.getLabel(row) != null && !resultsTable.getLabel(row).isEmpty()) {
+            		results[row][col] = resultsTable.getLabel(row);
+            	} else {
+            		results[row][col] = " ";
+            	}
+            }
+        }
+            
         // Figure out which holder to use.
         ExcelHolder holderToUse = fileHolder;
         if (fileHandlingMode == FileHandlingMode.OPEN_CLOSE) {
@@ -149,6 +168,70 @@ public class Read_and_Write_Excel implements PlugIn {
             f.setBold(true);
             boldStyle.setFont(f);
 
+            // Write the column header cells. If stackResults is chosen, then only write the header cells if they do not exist already. If an import cell reference is specified, then do not write the headers at all.
+            if(importCell == null) {
+                row = sheet.getRow(COLUMN_HEADER_ROW);
+                if (row == null) row = sheet.createRow(COLUMN_HEADER_ROW);
+                if (stackResults != true) {
+                    for (int headerIdx = 0; headerIdx < (headers.length + idxAdj); headerIdx++) {
+                        int cellCol = firstColIdx + headerIdx;
+                        Cell colHeader = row.getCell(cellCol);
+                        if (colHeader == null) colHeader = row.createCell(cellCol);
+                        // Make sure we write the "Count" column header to the first column, if we want it.
+                        if (cellCol == firstColIdx && !noCountColumn) colHeader.setCellValue("Count");
+                        else colHeader.setCellValue(headers[headerIdx - idxAdj]);
+                        colHeader.setCellStyle(boldStyle);
+                    }
+                } else {
+                    if (sheet.getRow(COLUMN_HEADER_ROW).getCell(0) == null){
+                        for (int headerIdx = 0; headerIdx < (headers.length + idxAdj); headerIdx++) {
+                            int cellCol = firstColIdx + headerIdx;
+                            Cell colHeader = row.getCell(cellCol);
+                            if (colHeader == null) colHeader = row.createCell(cellCol);
+                            // Make sure we write the "Count" column header to the first column, if we want it.
+                            if (cellCol == firstColIdx && !noCountColumn) colHeader.setCellValue("Count");
+                            else colHeader.setCellValue(headers[headerIdx - idxAdj]);
+                            colHeader.setCellStyle(boldStyle);
+                        }
+                    } 
+                }
+            }
+            
+            // Change the first column index to write data to, depending on stack_results status.
+            row = sheet.getRow(FIRST_DATA_ROW);
+           	int firstDataRow = FIRST_DATA_ROW;
+            if (sheet.getLastRowNum()!=1 && stackResults == true) {
+            	int lastColIdx = row.getLastCellNum()-1;
+            		// getLastCellNum() will output -1 if the row does not contain any cells, so we handle that scenario here (check for -2 as we already took away 1 above)
+            	    if (lastColIdx == -2) {
+            			//when the results table is empty the headings length is output as 0, so this must also be handled
+            			if (headers.length == 0) {
+            				lastColIdx = 0;
+            			} else lastColIdx = headers.length-1+idxAdj;
+            		}
+            	int lastRowOfLastColIdx = FIRST_DATA_ROW;
+            	Row rowL = sheet.getRow(lastRowOfLastColIdx);
+            	Cell testCell = row.getCell(lastColIdx);
+            	while (testCell != null){	
+            		lastRowOfLastColIdx++;
+            		rowL = sheet.getRow(lastRowOfLastColIdx);
+            		if (rowL != null){ testCell = rowL.getCell(lastColIdx);}
+            				else testCell = null;
+            	}
+            	firstDataRow = lastRowOfLastColIdx;
+            	firstColIdx = lastColIdx - headers.length;
+            	if (noCountColumn == true) firstColIdx = firstColIdx + 1;
+            }
+
+            // Change the first column and first data row index to write data to, depending on whether an import cell is specified.
+        	if (importCell != null) {
+        		String[] inputCellParts =  new String[3];
+        		CellReference cellRef = new CellReference(importCell);
+        		inputCellParts = cellRef.getCellRefParts();
+        		firstDataRow = ((int) Integer.valueOf(inputCellParts[1]))-1;
+            	firstColIdx = CellReference.convertColStringToIndex(inputCellParts[2]);
+        	}
+            
             // Write dataset label to the first row in the sheet.
             row = sheet.getRow(DATASET_LABEL_ROW);
             if (row == null) row = sheet.createRow(DATASET_LABEL_ROW);
@@ -157,27 +240,14 @@ public class Read_and_Write_Excel implements PlugIn {
             datasetLabelCell.setCellValue(dataSetLabel);
             datasetLabelCell.setCellStyle(boldStyle);
 
-            // Write the column header cells.
-            row = sheet.getRow(COLUMN_HEADER_ROW);
-            if (row == null) row = sheet.createRow(COLUMN_HEADER_ROW);
-            for (int headerIdx = 0; headerIdx < (headers.length + idxAdj); headerIdx++) {
-                int cellCol = firstColIdx + headerIdx;
-                Cell colHeader = row.getCell(cellCol);
-                if (colHeader == null) colHeader = row.createCell(cellCol);
-                // Make sure we write the "Count" column header to the first column, if we want it.
-                if (cellCol == firstColIdx && !noCountColumn) colHeader.setCellValue("Count");
-                else colHeader.setCellValue(headers[headerIdx - idxAdj]);
-                colHeader.setCellStyle(boldStyle);
-            }
-
             // Write the data (and count number, if necessary) to the sheet. All row/col numbers are 0-based indices.
             // We loop over the actual 2D results array here, and figure out the cell row/col based on that.
+            row = sheet.getRow(FIRST_DATA_ROW);
             for (int resultRow = 0; resultRow < results.length; resultRow++) {
                 // Figure out the cell row index, then get (or create) a row.
-                int cellRow = FIRST_DATA_ROW + resultRow;
+                int cellRow = firstDataRow + resultRow;
                 row = sheet.getRow(cellRow);
                 if (row == null) row = sheet.createRow(cellRow);
-
                 for (int resultCol = 0; resultCol < (results[resultRow].length + idxAdj); resultCol++) {
                     // Figure out the cell column index, then get (or create) a cell.
                     int cellCol = firstColIdx + resultCol;
@@ -186,8 +256,18 @@ public class Read_and_Write_Excel implements PlugIn {
 
                     // If this is the first cell column, and we want to write the row count, write that (1-based).
                     if (cellCol == firstColIdx && !noCountColumn) cell.setCellValue(resultRow + 1);
-                    else cell.setCellValue(results[resultRow][resultCol - idxAdj]);
+                    else {
+                        //Check result datatype and format the cell appropriately before writing
+                        //Not a perfect checking method, but will work most of the time without too much overhead
+                        if (results[resultRow][resultCol - idxAdj].matches(".*[A-Za-z].*") == true || results[resultRow][resultCol - idxAdj]  == " "){
+                            cell.setCellValue(results[resultRow][resultCol - idxAdj]);
+                        } else {
+                            cell.setCellType(CellType.NUMERIC);
+                    		cell.setCellValue(Double.parseDouble(results[resultRow][resultCol - idxAdj]));
+                        }
+                    }
                 }
+                IJ.showProgress(resultRow, results.length + ((int)Math.rint(results.length/100)) );
             }
 
             // Write the output to a file.
@@ -195,6 +275,7 @@ public class Read_and_Write_Excel implements PlugIn {
         } catch (IOException e) {
             IJ.handleException(e);
         }
+        IJ.showProgress(1);
     }
 
     /**
@@ -256,6 +337,13 @@ public class Read_and_Write_Excel implements PlugIn {
             ImagePlus currImage = WindowManager.getCurrentImage();
             if (currImage != null) dataSetLabel = currImage.getTitle();
         }
+        
+        // Figure out if we want to place new results data into existing columns
+        // Stacking data instead of placing it adjacent to existing data in the designated spreadsheet
+        stackResults = optionsStr.contains("stack_results");
+        
+        //Figure out if we want to import results data to a specific cell in the spreadsheet
+        importCell = Macro.getValue(optionsStr, "cell_ref", null);
     }
 
     private static class ExcelHolder {

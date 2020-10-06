@@ -10,6 +10,7 @@ The defaults can be overridden when calling the plugin from an ImageJ macro usin
 ## Macro Parameters
 This version of the Read_and_Write_Excel plugin supports additional features which make it more flexible for usage in ImageJ macros. These are the supported parameters:
 * `no_count_column`: Prevents the plugin from adding a "Count" column automatically.
+* `stack_results` : Instructs the plugin to export data underneath pre-existing data in the Excel file, instead of adjacent to it.
 * `file=`: The path to the excel file to use (uses the default desktop file otherwise)
 * `sheet=`: Which sheet in the excel file to put the results in
 * `dataset_label=`: The label to write in the cell above the data in the excel file
@@ -21,10 +22,13 @@ This version of the Read_and_Write_Excel plugin supports additional features whi
 ## Installation
 The easiest way to install the plugin is to use Fiji's built-in updater:
 1) Go to Help > Update...
-2) Click "Manage update sites"
-3) Click "Add update site"
-4) Give the new update site a name, and use the URL `http://sites.imagej.net/Bkromhout/`
-5) You should now see the plugin available in the updater.
+2) Click "Manage update sites"<br/>
+~~3) Click "Add update site"~~<br/>
+3) Find 'ResultsToExcel' in the list of plugins and mark the check-box.<br/>
+~~4) Give the new update site a name, and use the URL `http://sites.imagej.net/Bkromhout/`~~ (*does not host the most recent version currently*)<br/>
+4) Close the "Manage update sites" window and click "Apply changes" in the Imagej Updater main window.<br/>
+~~5) You should now see the plugin available in the updater.~~<br/>
+5) Restart ImageJ.
 
 If you can't do that for some reason, you should also be able to download the latest release, unzip it, and copy the plugin's JAR to the ImageJ plugins folder, and the JARs in the "jars" folder to ImageJ's "jars" folder.
 
